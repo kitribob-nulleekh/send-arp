@@ -127,6 +127,8 @@ int main(int argc, char* argv[])
     }
 
     while (true) {
+	sleep(0);
+
         struct pcap_pkthdr* header;
         const uint8_t* packet;
         res = pcap_next_ex(handle, &header, &packet);

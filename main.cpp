@@ -80,6 +80,28 @@ void get_my_ipv4_address(const char* dev, char* uc_IP)
         (ip_address & 0x000000FF));
 }
 
+int aio_send_packet(pcap_t* handle, Mac ethernetDestinationMac, Mac ethernetSourceMac, u_short operation, Mac arpSourceMac, u_long arpSourceIp, Mac arpTargetMac, u_long arpTargetIp) 
+{
+    arp_packet packet;
+
+    packet.eth_.dmac_ = ethernetDestinationMac;
+    packet.eth_.smac_ = ethernetSourceMac;
+    packet.eth_.type_ = htons(EthHdr::Arp);
+
+    packet.arp_.hrd_ = htons(ArpHdr::ETHER);
+    packet.arp_.pro_ = htons(EthHdr::Ip4);
+    packet.arp_.hln_ = Mac::SIZE;
+    packet.arp_.pln_ = Ip::SIZE;
+    packet.arp_.op_ = operation;
+    packet.arp_.smac_ = arpSourceMac;
+    packet.arp_.sip_ = arpSourceIp;
+    packet.arp_.tmac_ = arpTargetMac;
+    packet.arp_.tip_ = arpTargetIp;
+
+    return pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet),
+        sizeof(arp_packet));
+}
+
 int main(int argc, char* argv[])
 {
     if (argc != 4) {
@@ -103,24 +125,10 @@ int main(int argc, char* argv[])
 
     char* target_ip = argv[3];
 
-    arp_packet packet;
+    int res;
 
-    packet.eth_.dmac_ = Mac("ff:ff:ff:ff:ff:ff");
-    packet.eth_.smac_ = Mac(my_mac);
-    packet.eth_.type_ = htons(EthHdr::Arp);
+    res = aio_send_packet(handle, Mac("ff:ff:ff:ff:ff:ff"), Mac(my_mac), htons(ArpHdr::Request), Mac(my_mac), htonl(Ip(my_ip)), Mac("00:00:00:00:00:00"), htonl(Ip(sender_ip)));
 
-    packet.arp_.hrd_ = htons(ArpHdr::ETHER);
-    packet.arp_.pro_ = htons(EthHdr::Ip4);
-    packet.arp_.hln_ = Mac::SIZE;
-    packet.arp_.pln_ = Ip::SIZE;
-    packet.arp_.op_ = htons(ArpHdr::Request);
-    packet.arp_.smac_ = Mac(my_mac);
-    packet.arp_.sip_ = htonl(Ip(my_ip));
-    packet.arp_.tmac_ = Mac("00:00:00:00:00:00");
-    packet.arp_.tip_ = htonl(Ip(sender_ip));
-
-    int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet),
-        sizeof(arp_packet));
     if (res != 0) {
         printf("ERROR: pcap_sendpacket return %d error=%s\n", res,
             pcap_geterr(handle));
@@ -163,22 +171,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    packet.eth_.dmac_ = Mac(sender_mac);
-    packet.eth_.smac_ = Mac(my_mac);
-    packet.eth_.type_ = htons(EthHdr::Arp);
+    res = aio_send_packet(handle, Mac(sender_mac), Mac(my_mac), htons(ArpHdr::Reply), Mac(my_mac), htonl(Ip(target_ip)), Mac(sender_mac), htonl(Ip(sender_ip)));
 
-    packet.arp_.hrd_ = htons(ArpHdr::ETHER);
-    packet.arp_.pro_ = htons(EthHdr::Ip4);
-    packet.arp_.hln_ = Mac::SIZE;
-    packet.arp_.pln_ = Ip::SIZE;
-    packet.arp_.op_ = htons(ArpHdr::Reply);
-    packet.arp_.smac_ = Mac(my_mac);
-    packet.arp_.sip_ = htonl(Ip(target_ip));
-    packet.arp_.tmac_ = Mac(sender_mac);
-    packet.arp_.tip_ = htonl(Ip(sender_ip));
-
-    res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet),
-        sizeof(arp_packet));
     if (res != 0) {
         printf("ERROR: pcap_sendpacket return %d error=%s\n", res,
             pcap_geterr(handle));

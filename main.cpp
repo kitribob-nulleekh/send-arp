@@ -124,6 +124,7 @@ int main(int argc, char* argv[])
     if (res != 0) {
         printf("ERROR: pcap_sendpacket return %d error=%s\n", res,
             pcap_geterr(handle));
+        return -1;
     }
 
     while (true) {
@@ -181,6 +182,7 @@ int main(int argc, char* argv[])
     if (res != 0) {
         printf("ERROR: pcap_sendpacket return %d error=%s\n", res,
             pcap_geterr(handle));
+        return -1;
     }
 
     pcap_close(handle);
